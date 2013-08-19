@@ -38,12 +38,14 @@ DestroyCHOPInstance(CHOP_CPlusPlusBase *instance)
 	// Touch is shutting down, when the CHOP using that instance is deleted, or
 	// if the CHOP loads a different DLL
 	delete (MMMRiftCHOP*)instance;
+	System::Destroy();
 }
 
 };
 
 MMMRiftCHOP::MMMRiftCHOP(const CHOP_NodeInfo *info) : myNodeInfo(info)
 {
+	didOutputSettings = false;
 	System::Init();
 	pManager = *DeviceManager::Create();
 	pHMD = *pManager->EnumerateDevices<HMDDevice>().CreateDevice();
@@ -71,7 +73,6 @@ MMMRiftCHOP::~MMMRiftCHOP()
 	pSensor.Clear();
 	pHMD.Clear();
 	pManager.Clear();
-	System::Destroy();
 }
 
 void
@@ -206,6 +207,9 @@ MMMRiftCHOP::getChannelName(int index, void* reserved)
 	case mmm::Channel::render_scale:
 		return "render_scale";
 		break;
+	case mmm::Channel::shader_scale:
+		return "shader_scale";
+		break;
 	case mmm::Channel::count:
 		return "this_should_never_happen";
 		break;
@@ -233,45 +237,46 @@ MMMRiftCHOP::execute(const CHOP_Output* output,
 		output->channels[mmm::Channel::sensor_pitch][0] = RadToDegree(pitch);
 		output->channels[mmm::Channel::sensor_roll][0] = RadToDegree(roll);
 
-		output->channels[mmm::Channel::version][0] = Info.Version;
-		output->channels[mmm::Channel::h_resolution][0] = Info.HResolution;
-		output->channels[mmm::Channel::v_resolution][0] = Info.VResolution;
-		output->channels[mmm::Channel::h_screen_size][0] = Info.HScreenSize;
-		output->channels[mmm::Channel::v_screen_size][0] = Info.VScreenSize;
-		output->channels[mmm::Channel::v_screen_center][0] = Info.VScreenCenter;
-		output->channels[mmm::Channel::eye_to_screen_distance][0] = Info.EyeToScreenDistance;
-		output->channels[mmm::Channel::lens_separation_distance][0] = Info.LensSeparationDistance;
-		output->channels[mmm::Channel::interpupillary_distance][0] = Info.InterpupillaryDistance;
-		output->channels[mmm::Channel::distortion_k_0][0] = Info.DistortionK[0];
-		output->channels[mmm::Channel::distortion_k_1][0] = Info.DistortionK[1];
-		output->channels[mmm::Channel::distortion_k_2][0] = Info.DistortionK[2];
-		output->channels[mmm::Channel::render_scale][0] = renderScale;
+		if(!didOutputSettings){
+			output->channels[mmm::Channel::version][0] = Info.Version;
+			output->channels[mmm::Channel::h_resolution][0] = Info.HResolution;
+			output->channels[mmm::Channel::v_resolution][0] = Info.VResolution;
+			output->channels[mmm::Channel::h_screen_size][0] = Info.HScreenSize;
+			output->channels[mmm::Channel::v_screen_size][0] = Info.VScreenSize;
+			output->channels[mmm::Channel::v_screen_center][0] = Info.VScreenCenter;
+			output->channels[mmm::Channel::eye_to_screen_distance][0] = Info.EyeToScreenDistance;
+			output->channels[mmm::Channel::lens_separation_distance][0] = Info.LensSeparationDistance;
+			output->channels[mmm::Channel::interpupillary_distance][0] = Info.InterpupillaryDistance;
+			output->channels[mmm::Channel::distortion_k_0][0] = Info.DistortionK[0];
+			output->channels[mmm::Channel::distortion_k_1][0] = Info.DistortionK[1];
+			output->channels[mmm::Channel::distortion_k_2][0] = Info.DistortionK[2];
+			output->channels[mmm::Channel::render_scale][0] = renderScale;
+			output->channels[mmm::Channel::shader_scale][0] = 0.5f / renderScale;
 
-		StereoEyeParams leftEye = stereo.GetEyeRenderParams(StereoEye_Left);
-		Viewport leftVP = leftEye.VP;
-		Matrix4f leftProjection = leftEye.Projection;
-		Matrix4f leftViewAdjust = leftEye.ViewAdjust;
+			StereoEyeParams leftEye = stereo.GetEyeRenderParams(StereoEye_Left);
+			Viewport leftVP = leftEye.VP;
+			Matrix4f leftProjection = leftEye.Projection;
+			Matrix4f leftViewAdjust = leftEye.ViewAdjust;
 
-		output->channels[mmm::Channel::left_eye_projection_0_0][0] = leftProjection.M[0][0];
-		output->channels[mmm::Channel::left_eye_projection_0_1][0] = leftProjection.M[1][0];
-		output->channels[mmm::Channel::left_eye_projection_0_2][0] = leftProjection.M[2][0];
-		output->channels[mmm::Channel::left_eye_projection_0_3][0] = leftProjection.M[3][0];
-		output->channels[mmm::Channel::left_eye_projection_1_0][0] = leftProjection.M[0][1];
-		output->channels[mmm::Channel::left_eye_projection_1_1][0] = leftProjection.M[1][1];
-		output->channels[mmm::Channel::left_eye_projection_1_2][0] = leftProjection.M[2][1];
-		output->channels[mmm::Channel::left_eye_projection_1_3][0] = leftProjection.M[3][1];
-		output->channels[mmm::Channel::left_eye_projection_2_0][0] = leftProjection.M[0][2];
-		output->channels[mmm::Channel::left_eye_projection_2_1][0] = leftProjection.M[1][2];
-		output->channels[mmm::Channel::left_eye_projection_2_2][0] = leftProjection.M[2][2];
-		output->channels[mmm::Channel::left_eye_projection_2_3][0] = leftProjection.M[3][2];
-		output->channels[mmm::Channel::left_eye_projection_3_0][0] = leftProjection.M[0][3];
-		output->channels[mmm::Channel::left_eye_projection_3_1][0] = leftProjection.M[1][3];
-		output->channels[mmm::Channel::left_eye_projection_3_2][0] = leftProjection.M[2][3];
-		output->channels[mmm::Channel::left_eye_projection_3_3][0] = leftProjection.M[3][3];
-	} else {
-		output->channels[mmm::Channel::sensor_yaw][0] = 0;
-		output->channels[mmm::Channel::sensor_pitch][0] = 0;
-		output->channels[mmm::Channel::sensor_roll][0] = 0;
+			output->channels[mmm::Channel::left_eye_projection_0_0][0] = leftProjection.M[0][0];
+			output->channels[mmm::Channel::left_eye_projection_0_1][0] = leftProjection.M[1][0];
+			output->channels[mmm::Channel::left_eye_projection_0_2][0] = leftProjection.M[2][0];
+			output->channels[mmm::Channel::left_eye_projection_0_3][0] = leftProjection.M[3][0];
+			output->channels[mmm::Channel::left_eye_projection_1_0][0] = leftProjection.M[0][1];
+			output->channels[mmm::Channel::left_eye_projection_1_1][0] = leftProjection.M[1][1];
+			output->channels[mmm::Channel::left_eye_projection_1_2][0] = leftProjection.M[2][1];
+			output->channels[mmm::Channel::left_eye_projection_1_3][0] = leftProjection.M[3][1];
+			output->channels[mmm::Channel::left_eye_projection_2_0][0] = leftProjection.M[0][2];
+			output->channels[mmm::Channel::left_eye_projection_2_1][0] = leftProjection.M[1][2];
+			output->channels[mmm::Channel::left_eye_projection_2_2][0] = leftProjection.M[2][2];
+			output->channels[mmm::Channel::left_eye_projection_2_3][0] = leftProjection.M[3][2];
+			output->channels[mmm::Channel::left_eye_projection_3_0][0] = leftProjection.M[0][3];
+			output->channels[mmm::Channel::left_eye_projection_3_1][0] = leftProjection.M[1][3];
+			output->channels[mmm::Channel::left_eye_projection_3_2][0] = leftProjection.M[2][3];
+			output->channels[mmm::Channel::left_eye_projection_3_3][0] = leftProjection.M[3][3];
+			didOutputSettings = true;
+		}
+
 	}
 }
 

@@ -54,6 +54,7 @@ private:
 	bool				InfoLoaded;
 	StereoConfig		stereo;
 	float				renderScale;
+	bool				didOutputSettings;
 
 };
 
@@ -76,6 +77,8 @@ namespace mmm {
 	  distortion_k_0,
 	  distortion_k_1,
 	  distortion_k_2,
+	  shader_scale,
+	  render_scale,
 	  left_eye_projection_0_0,
 	  left_eye_projection_0_1,
 	  left_eye_projection_0_2,
@@ -92,7 +95,6 @@ namespace mmm {
 	  left_eye_projection_3_1,
 	  left_eye_projection_3_2,
 	  left_eye_projection_3_3,
-	  render_scale,
 	  count
    } ;
 }
